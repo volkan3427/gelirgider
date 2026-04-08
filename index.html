@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -51,10 +53,13 @@
         <!-- Actions -->
         <section class="actions">
             <button class="btn btn-income" onclick="openModal('income')">
-                <i class="fa-solid fa-plus"></i> Gelir Ekle
+                <i class="fa-solid fa-plus"></i> Gelir
             </button>
             <button class="btn btn-expense" onclick="openModal('expense')">
-                <i class="fa-solid fa-minus"></i> Gider Ekle
+                <i class="fa-solid fa-minus"></i> Gider
+            </button>
+            <button class="btn btn-primary" onclick="openSidebar()">
+                <i class="fa-solid fa-chart-pie"></i> Raporlar
             </button>
         </section>
 
@@ -102,6 +107,45 @@
 
                 <button type="submit" class="btn btn-primary w-100">Kaydet</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Reports Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Reports Sidebar -->
+    <div class="sidebar glass" id="reportsSidebar">
+        <div class="sidebar-header">
+            <h3>Gider Analizi</h3>
+            <button class="close-btn" onclick="closeSidebar()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="sidebar-content">
+            <div class="chart-container">
+                <canvas id="expenseChart"></canvas>
+            </div>
+            <div class="category-summary">
+                <h4>Kategorilere Göre Toplamlar</h4>
+                <div id="categorySummaryList" class="category-list">
+                    <!-- Summaries generated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Detail Modal -->
+    <div class="modal-overlay" id="categoryDetailModal">
+        <div class="modal glass" style="height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="detailModalTitle">Detaylar</h3>
+                <button class="close-btn" onclick="closeDetailModal()"><i class="fa-solid fa-arrow-left"></i></button>
+            </div>
+            <div class="detail-total-box glass">
+                <span>Toplam Harcama:</span>
+                <h2 id="detailCategoryTotal">₺0.00</h2>
+            </div>
+            <div class="transaction-list filter-detail-list" id="detailTransactionList" style="flex: 1; overflow-y: auto; margin-top: 15px;">
+                <!-- Filtered transactions here -->
+            </div>
         </div>
     </div>
 

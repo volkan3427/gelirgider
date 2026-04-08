@@ -1,5 +1,6 @@
 // Global State
 let transactions = [];
+let expenseChartInstance = null;
 
 // Categories defined from user's data
 const expenseCategories = [
@@ -180,3 +181,144 @@ document.getElementById('transactionModal').addEventListener('click', function(e
         closeModal();
     }
 });
+
+// ====== Reports & Sidebar Logic ======
+
+function openSidebar() {
+    document.getElementById('sidebarOverlay').classList.add('active');
+    document.getElementById('reportsSidebar').classList.add('active');
+    renderReports();
+}
+
+function closeSidebar() {
+    document.getElementById('sidebarOverlay').classList.remove('active');
+    document.getElementById('reportsSidebar').classList.remove('active');
+}
+
+function renderReports() {
+    // 1. Group expenses by category
+    const expenses = transactions.filter(t => t.type === 'expense');
+    const categoryTotals = {};
+
+    expenses.forEach(t => {
+        if (!categoryTotals[t.category]) categoryTotals[t.category] = 0;
+        categoryTotals[t.category] += t.amount;
+    });
+
+    // 2. Sort categories by total expense (descending)
+    const sortedCategories = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a]);
+
+    // 3. Prepare Chart Data
+    const chartLabels = [];
+    const chartData = [];
+    // Colors matching CSS theme (reds/oranges/pinks for expense)
+    const baseColors = ['#ef4444', '#f97316', '#f59e0b', '#8b5cf6', '#ec4899', '#f43f5e', '#a855f7', '#6366f1', '#14b8a6', '#eab308'];
+    const bgColors = [];
+
+    const summaryList = document.getElementById('categorySummaryList');
+    summaryList.innerHTML = '';
+
+    if (sortedCategories.length === 0) {
+        summaryList.innerHTML = '<p style="color:var(--text-secondary);font-size:13px;text-align:center;">Gider bulunamadı.</p>';
+        if (expenseChartInstance) expenseChartInstance.destroy();
+        return;
+    }
+
+    sortedCategories.forEach((cat, index) => {
+        const total = categoryTotals[cat];
+        chartLabels.push(cat);
+        chartData.push(total);
+        
+        const color = baseColors[index % baseColors.length];
+        bgColors.push(color);
+
+        // Build list item HTML
+        const itemHtml = `
+            <div class="sum-item" onclick="openCategoryDetail('${cat}', ${total})">
+                <div class="sum-item-left">
+                    <div class="sum-color-dot" style="background-color: ${color}"></div>
+                    <span>${cat}</span>
+                </div>
+                <div class="sum-amount">₺${total.toLocaleString('tr-TR', {minimumFractionDigits:2})}</div>
+            </div>
+        `;
+        summaryList.insertAdjacentHTML('beforeend', itemHtml);
+    });
+
+    // 4. Render Chart
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    if (expenseChartInstance) {
+        expenseChartInstance.destroy(); // remove old instances
+    }
+
+    // Dynamic Chart.js text color depending on theme
+    Chart.defaults.color = "#94a3b8";
+
+    expenseChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                data: chartData,
+                backgroundColor: bgColors,
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false // We have the custom list below
+                }
+            },
+            cutout: '70%'
+        }
+    });
+}
+
+function openCategoryDetail(category, totalAmount) {
+    const modal = document.getElementById('categoryDetailModal');
+    const title = document.getElementById('detailModalTitle');
+    const totalBox = document.getElementById('detailCategoryTotal');
+    const list = document.getElementById('detailTransactionList');
+
+    title.textContent = category + " Detayları";
+    totalBox.textContent = `₺${totalAmount.toLocaleString('tr-TR', {minimumFractionDigits:2})}`;
+    list.innerHTML = '';
+
+    // Filter tx matching exactly this category and type expense
+    const categoryTx = transactions.filter(t => t.type === 'expense' && t.category === category);
+    categoryTx.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    categoryTx.forEach(t => {
+        let dateStr = "Tarihsiz";
+        if(t.date) {
+            const dateObj = new Date(t.date);
+            if(!isNaN(dateObj)) dateStr = dateObj.toLocaleDateString('tr-TR');
+        }
+
+        const html = `
+            <div class="transaction-item expense-item" style="margin-bottom: 10px;">
+                <div class="tr-left">
+                    <div class="tr-icon"><i class="fa-solid fa-arrow-up"></i></div>
+                    <div class="tr-details">
+                        <h4>${t.category}</h4>
+                        <p>${dateStr} ${t.desc ? ' • ' + t.desc : ''}</p>
+                    </div>
+                </div>
+                <div class="tr-right">
+                    <div class="tr-amount">-₺${t.amount.toLocaleString('tr-TR', {minimumFractionDigits:2})}</div>
+                </div>
+            </div>
+        `;
+        list.insertAdjacentHTML('beforeend', html);
+    });
+
+    modal.classList.add('active');
+}
+
+function closeDetailModal() {
+    document.getElementById('categoryDetailModal').classList.remove('active');
+}
