@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bütçem - Gelir Gider</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="user-greeting">
+                <div class="avatar"><i class="fa-solid fa-wallet"></i></div>
+                <div>
+                    <h2 class="greeting">Hoş Geldiniz</h2>
+                    <p class="date" id="currentDate">--</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Balance Card -->
+        <section class="balance-section">
+            <div class="balance-card glass">
+                <p class="balance-label">Toplam Bakiye</p>
+                <h1 class="balance-amount" id="totalBalance">₺0.00</h1>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-card glass income">
+                    <div class="stat-icon"><i class="fa-solid fa-arrow-down"></i></div>
+                    <div class="stat-info">
+                        <p>Gelir</p>
+                        <h3 id="totalIncome">₺0.00</h3>
+                    </div>
+                </div>
+                <div class="stat-card glass expense">
+                    <div class="stat-icon"><i class="fa-solid fa-arrow-up"></i></div>
+                    <div class="stat-info">
+                        <p>Gider</p>
+                        <h3 id="totalExpense">₺0.00</h3>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Actions -->
+        <section class="actions">
+            <button class="btn btn-income" onclick="openModal('income')">
+                <i class="fa-solid fa-plus"></i> Gelir Ekle
+            </button>
+            <button class="btn btn-expense" onclick="openModal('expense')">
+                <i class="fa-solid fa-minus"></i> Gider Ekle
+            </button>
+        </section>
+
+        <!-- Recent Transactions -->
+        <section class="transactions">
+            <div class="section-header">
+                <h3>Son İşlemler</h3>
+                <button class="filter-btn" onclick="clearData()"><i class="fa-solid fa-trash-can"></i> Tümünü Sil</button>
+            </div>
+            <div class="transaction-list" id="transactionList">
+                <!-- Transactions will be rendered here -->
+            </div>
+        </section>
+    </div>
+
+    <!-- Add Transaction Modal -->
+    <div class="modal-overlay" id="transactionModal">
+        <div class="modal glass">
+            <div class="modal-header">
+                <h3 id="modalTitle">Yeni İşlem Ekle</h3>
+                <button class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="transactionForm" onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="transType" value="">
+                
+                <div class="form-group">
+                    <label>Tutar (₺)</label>
+                    <input type="number" id="transAmount" step="0.01" required placeholder="0.00">
+                </div>
+
+                <div class="form-group">
+                    <label>Kategori</label>
+                    <select id="transCategory" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label>Açıklama (Opsiyonel)</label>
+                    <input type="text" id="transDesc" placeholder="Detay yazabilirsiniz...">
+                </div>
+
+                <div class="form-group">
+                    <label>Tarih</label>
+                    <input type="date" id="transDate" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Kaydet</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
