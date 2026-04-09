@@ -80,19 +80,29 @@
         <div class="modal glass">
             <div class="modal-header">
                 <h3 id="modalTitle">Yeni İşlem Ekle</h3>
-                <button class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button type="submit" form="transactionForm" class="btn btn-primary" style="padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: bold;">Kaydet</button>
+                    <button class="close-btn" type="button" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
             </div>
             <form id="transactionForm" onsubmit="handleFormSubmit(event)">
                 <input type="hidden" id="transType" value="">
                 
                 <div class="form-group">
                     <label>Tutar (₺)</label>
-                    <input type="number" id="transAmount" step="0.01" required placeholder="0.00">
+                    <input type="text" inputmode="decimal" id="transAmount" required placeholder="0,00" oninput="formatAmountInput(this)">
                 </div>
 
                 <div class="form-group">
-                    <label>Kategori</label>
-                    <select id="transCategory" required></select>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="margin-bottom: 0;">Kategori</label>
+                        <button type="button" class="btn-link" onclick="toggleCategoryEditMode()" id="editCategoryBtn" style="background:none;border:none;color:var(--primary-color);font-size:13px;cursor:pointer;">Düzenle</button>
+                    </div>
+                    <div id="categoryGrid" class="category-grid">
+                        <!-- Categories dynamically loaded -->
+                    </div>
+                    <!-- Hidden input to hold the selected category value for validation -->
+                    <input type="text" id="transCategory" style="opacity:0; position:absolute; height:0; width:0; z-index:-1;">
                 </div>
 
                 <div class="form-group">
@@ -105,7 +115,7 @@
                     <input type="date" id="transDate" required>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100">Kaydet</button>
+                <!-- Kaydet button moved to header -->
             </form>
         </div>
     </div>

@@ -3,13 +3,16 @@ let transactions = [];
 let expenseChartInstance = null;
 
 // Categories defined from user's data
-const expenseCategories = [
+let expenseCategories = [];
+let incomeCategories = [];
+
+const defaultExpenseCategories = [
     "Ev", "Kişisel", "Yemek", "Market (Migros vb.)", "Kira", "Maaş", 
     "Ekrem abi", "Emrah", "Yaser", "Meran", "Harun", "Türkmenler", 
     "Barut", "Sandviç", "Metro", "Dükkan", "Kahve", "Tereyağ", "Çikolata", "Diğer"
 ];
 
-const incomeCategories = [
+const defaultIncomeCategories = [
     "Nakit", "Kart", "Diğer"
 ];
 
@@ -30,7 +33,27 @@ function loadData() {
     if (saved) {
         transactions = JSON.parse(saved);
     }
+    
+    const savedExpCat = localStorage.getItem('gelirgider_exp_cat');
+    if (savedExpCat) {
+        expenseCategories = JSON.parse(savedExpCat);
+    } else {
+        expenseCategories = [...defaultExpenseCategories];
+    }
+    
+    const savedIncCat = localStorage.getItem('gelirgider_inc_cat');
+    if (savedIncCat) {
+        incomeCategories = JSON.parse(savedIncCat);
+    } else {
+        incomeCategories = [...defaultIncomeCategories];
+    }
+    
     updateUI();
+}
+
+function saveCategories() {
+    localStorage.setItem('gelirgider_exp_cat', JSON.stringify(expenseCategories));
+    localStorage.setItem('gelirgider_inc_cat', JSON.stringify(incomeCategories));
 }
 
 function saveData() {
@@ -52,8 +75,15 @@ function updateUI() {
             </div>
         `;
     } else {
-        // Sort by date desc
-        transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Sort by date desc, then by id (time) desc for newest on top
+        transactions.sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (dateA === dateB) {
+                return parseInt(b.id) - parseInt(a.id);
+            }
+            return dateB - dateA;
+        });
 
         transactions.forEach(t => {
             if (t.type === 'income') tIncome += t.amount;
@@ -96,33 +126,149 @@ function updateUI() {
     document.getElementById('totalExpense').textContent = `₺${tExpense.toLocaleString('tr-TR', {minimumFractionDigits:2})}`;
 }
 
+let isCategoryEditMode = false;
+
 function openModal(type) {
     const modal = document.getElementById('transactionModal');
     const title = document.getElementById('modalTitle');
     const typeInput = document.getElementById('transType');
-    const select = document.getElementById('transCategory');
 
+    // reset hidden inputs
     typeInput.value = type;
-    select.innerHTML = ''; // clear
+    document.getElementById('transCategory').value = '';
+    
+    isCategoryEditMode = false;
+    const editBtn = document.getElementById('editCategoryBtn');
+    if (editBtn) {
+        editBtn.textContent = 'Düzenle';
+        editBtn.style.color = 'var(--primary-color)';
+    }
 
     if (type === 'income') {
         title.textContent = 'Gelir Ekle';
-        incomeCategories.forEach(c => {
-            select.add(new Option(c, c));
-        });
     } else {
         title.textContent = 'Gider Ekle';
-        // Sort expenses alphabetically for easier finding
-        [...expenseCategories].sort((a,b)=> a.localeCompare(b,'tr')).forEach(c => {
-            select.add(new Option(c, c));
-        });
     }
+
+    renderCategoryGrid(type);
 
     // Reset amounts
     document.getElementById('transAmount').value = '';
     document.getElementById('transDesc').value = '';
 
     modal.classList.add('active');
+}
+
+function toggleCategoryEditMode() {
+    isCategoryEditMode = !isCategoryEditMode;
+    const btn = document.getElementById('editCategoryBtn');
+    if (isCategoryEditMode) {
+        btn.textContent = 'Bitti';
+        btn.style.color = 'var(--expense-color)';
+    } else {
+        btn.textContent = 'Düzenle';
+        btn.style.color = 'var(--primary-color)';
+    }
+    const type = document.getElementById('transType').value;
+    renderCategoryGrid(type);
+}
+
+function renderCategoryGrid(type) {
+    const grid = document.getElementById('categoryGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    const currentSelected = document.getElementById('transCategory').value;
+    let cats = type === 'income' ? incomeCategories : expenseCategories;
+    
+    if (type === 'expense') {
+        cats = [...cats].sort((a,b)=> a.localeCompare(b,'tr'));
+    }
+
+    cats.forEach(c => {
+        const box = document.createElement('div');
+        box.className = 'category-box';
+        if (c === currentSelected) box.classList.add('selected');
+        if (isCategoryEditMode) box.classList.add('edit-mode');
+        
+        box.textContent = c;
+        
+        if (isCategoryEditMode) {
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'category-delete-btn';
+            delBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteCategory(type, c);
+            };
+            box.appendChild(delBtn);
+        } else {
+            box.onclick = () => {
+                document.getElementById('transCategory').value = c;
+                renderCategoryGrid(type);
+            };
+        }
+        
+        grid.appendChild(box);
+    });
+
+    const addBox = document.createElement('div');
+    addBox.className = 'category-box add-btn';
+    addBox.innerHTML = '<i class="fa-solid fa-plus"></i>';
+    addBox.onclick = () => addNewCategory(type);
+    grid.appendChild(addBox);
+}
+
+function addNewCategory(type) {
+    const newCat = prompt('Yeni kategori adını girin:');
+    if(newCat && newCat.trim() !== '') {
+        const catName = newCat.trim();
+        if(type === 'income' && !incomeCategories.includes(catName)) {
+            incomeCategories.push(catName);
+        } else if(type === 'expense' && !expenseCategories.includes(catName)) {
+            expenseCategories.push(catName);
+        }
+        saveCategories();
+        renderCategoryGrid(type);
+    }
+}
+
+function deleteCategory(type, catName) {
+    if(confirm(`"${catName}" kategorisini silmek istediğinize emin misiniz?`)) {
+        if(type === 'income') {
+            incomeCategories = incomeCategories.filter(c => c !== catName);
+        } else {
+            expenseCategories = expenseCategories.filter(c => c !== catName);
+        }
+        saveCategories();
+        renderCategoryGrid(type);
+        
+        // update hidden input if selected
+        const currentSelected = document.getElementById('transCategory').value;
+        if(currentSelected === catName) {
+            document.getElementById('transCategory').value = '';
+        }
+    }
+}
+
+function formatAmountInput(input) {
+    let val = input.value.replace(/[^0-9,]/g, '');
+    const parts = val.split(',');
+    if (parts.length > 2) {
+        val = parts[0] + ',' + parts.slice(1).join('');
+    }
+    if (val) {
+        let intPart = parts[0];
+        const decPart = parts.length > 1 ? ',' + parts[1].substring(0, 2) : '';
+        if (intPart) {
+            intPart = parseInt(intPart, 10).toString();
+            intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+        input.value = intPart + decPart;
+    } else {
+        input.value = '';
+    }
 }
 
 function closeModal() {
@@ -134,13 +280,17 @@ function handleFormSubmit(e) {
     e.preventDefault();
 
     const type = document.getElementById('transType').value;
+    
     const amountStr = document.getElementById('transAmount').value;
-    const amount = parseFloat(amountStr);
+    let cleanAmountStr = amountStr.replace(/\./g, '').replace(',', '.');
+    const amount = parseFloat(cleanAmountStr);
+    
     const category = document.getElementById('transCategory').value;
     const desc = document.getElementById('transDesc').value;
     const date = document.getElementById('transDate').value;
 
     if (!amount || amount <= 0) return alert('Lütfen geçerli bir tutar giriniz.');
+    if (!category || category.trim() === '') return alert('Lütfen bir kategori seçiniz.');
     if (!date) return alert('Lütfen tarih seçiniz.');
 
     const newTrans = {
@@ -290,14 +440,36 @@ function openCategoryDetail(category, totalAmount) {
 
     // Filter tx matching exactly this category and type expense
     const categoryTx = transactions.filter(t => t.type === 'expense' && t.category === category);
-    categoryTx.sort((a,b) => new Date(b.date) - new Date(a.date));
+    categoryTx.sort((a,b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA === dateB) {
+            return parseInt(b.id) - parseInt(a.id);
+        }
+        return dateB - dateA;
+    });
 
     categoryTx.forEach(t => {
         let dateStr = "Tarihsiz";
-        if(t.date) {
+        let timeStr = "";
+        
+        if (t.date) {
             const dateObj = new Date(t.date);
-            if(!isNaN(dateObj)) dateStr = dateObj.toLocaleDateString('tr-TR');
+            if (!isNaN(dateObj)) {
+                dateStr = dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+            }
         }
+        
+        if (t.id) {
+            const timeObj = new Date(parseInt(t.id));
+            if (!isNaN(timeObj)) {
+                const hours = timeObj.getHours().toString().padStart(2, '0');
+                const minutes = timeObj.getMinutes().toString().padStart(2, '0');
+                timeStr = `${hours}:${minutes}`;
+            }
+        }
+        
+        const displayDate = timeStr ? `${dateStr} - ${timeStr}` : dateStr;
 
         const html = `
             <div class="transaction-item expense-item" style="margin-bottom: 10px;">
@@ -305,7 +477,7 @@ function openCategoryDetail(category, totalAmount) {
                     <div class="tr-icon"><i class="fa-solid fa-arrow-up"></i></div>
                     <div class="tr-details">
                         <h4>${t.category}</h4>
-                        <p>${dateStr} ${t.desc ? ' • ' + t.desc : ''}</p>
+                        <p>${displayDate} ${t.desc ? ' • ' + t.desc : ''}</p>
                     </div>
                 </div>
                 <div class="tr-right">
